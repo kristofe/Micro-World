@@ -1,0 +1,8 @@
+from .pipeline_wan_fun import WanFunPipeline
+from .pipeline_wan_fun_inpaint import WanFunInpaintPipeline
+from .pipeline_wan_action_t2w import WanActionT2WPipeline
+from .pipeline_wan_action_i2w import WanActionI2WPipeline
+
+
+WanPipeline = WanFunPipeline
+WanI2VPipeline = WanFunInpaintPipeline
