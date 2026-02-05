@@ -9,7 +9,6 @@
 - [Quick Start](#quick-start)
 - [Video Result](#video-result)
 - [Acknowledgement](#acknowledgement)
-- [License](#license)
 
 # Introduction
 Micro-World is a series of action-controlled interactive world models developed by the AMD AIG team and trained on AMD Instinct™ MI250/MI325 GPUs. It includes both text-to-video and image-to-video variants, enabling a wide range of application scenarios. Built on Wan as the base model, Micro-World is trained on a MineCraft dataset and is designed to generate high-quality, open-domain visual environments.
@@ -350,9 +349,14 @@ We observe that fully decoupling the action module from game-specific styles in 
   </tr>
 </table>
 
+## 🤗Resources
+### Pre-trained models
+- Text-to-World: [Micro-World-T2W](https://huggingface.co/amd/Micro-World-T2W)
+- Image-to-World: [Micro-World-I2W](https://huggingface.co/amd/Micro-World-I2W)
+### Dataset
+- [MC-Dataset](https://huggingface.co/datasets/amd/Micro-World-MC-Dataset)
+
 ## Acknowledgement
 Our codebase is built upon [Wan2.1](https://github.com/Wan-Video/Wan2.1/), [VideoX-Fun](https://github.com/aigc-apps/VideoX-Fun). We sincerely thank the authors for open-sourcing their excellent codebases. 
 
 Our datasets are collected using [MineDojo](https://github.com/MineDojo/MineDojo) and captioned with [miniCPM-V](https://github.com/OpenBMB/MiniCPM-V). We also extend our appreciation to the respective teams for their high-quality tools and contributions.
-## License
-This project is licensed under the [Apache License (Version 2.0)](https://github.com/modelscope/modelscope/blob/master/LICENSE).
