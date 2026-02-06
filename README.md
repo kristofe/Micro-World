@@ -2,6 +2,10 @@
   <br>
   <br>
   <h1>AMD Micro-World: action-controlled Interactive world model</h1>
+<a href='https://rocm.blogs.amd.com/artificial-intelligence/micro-world/README.html'><img src='https://img.shields.io/badge/Technical-Blog-red'></a> 
+<a href='https://huggingface.co/amd/Micro-World-T2W'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-T2W Model-blue'></a>
+<a href='https://huggingface.co/amd/Micro-World-I2W'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-I2W Model-blue'></a>
+<a href='https://huggingface.co/datasets/amd/Micro-World-MC-Dataset'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-blue'></a>
 </div>
 
 # Table of Contents
@@ -350,6 +354,9 @@ We observe that fully decoupling the action module from game-specific styles in 
 </table>
 
 ## 🤗Resources
+### Technical blog
+- [Micro-World: First AMD Open-Source World Models for Interactive Video Generation](https://rocm.blogs.amd.com/artificial-intelligence/micro-world/README.html)
+
 ### Pre-trained models
 - Text-to-World: [Micro-World-T2W](https://huggingface.co/amd/Micro-World-T2W)
 - Image-to-World: [Micro-World-I2W](https://huggingface.co/amd/Micro-World-I2W)
