@@ -42,6 +42,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
+import torchvision
 import transformers
 from accelerate import Accelerator
 from accelerate.logging import get_logger
@@ -1282,7 +1283,7 @@ def main():
                 # Backpropagate
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
-                    accelerator.clip_grad_norm_(trainable_params_optim, args.max_grad_norm)
+                    grad_norm = accelerator.clip_grad_norm_(trainable_params_optim, args.max_grad_norm)
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
@@ -1292,6 +1293,8 @@ def main():
                 progress_bar.update(1)
                 global_step += 1
                 accelerator.log({"train_loss": train_loss}, step=global_step)
+                if accelerator.is_main_process:
+                    writer.add_scalar("training/grad_norm", grad_norm.item() if torch.is_tensor(grad_norm) else grad_norm, global_step)
                 train_loss = 0.0
 
                 if accelerator.is_main_process and global_step % 50 == 0:
@@ -1304,8 +1307,27 @@ def main():
                         gif_dir = os.path.join(args.output_dir, "training_gifs")
                         os.makedirs(gif_dir, exist_ok=True)
                         save_videos_grid(sb_grid, os.path.join(gif_dir, f"step_{global_step:06d}.gif"), rescale=True, n_rows=b)
-                        tb_vid = ((side_by_side + 1.0) / 2.0).clamp(0, 1)  # (b, f, c, h, w*2), [0, 1]
-                        writer.add_video("training/source_vs_target", tb_vid, global_step, fps=8)
+
+                        # Log frame grid to tensorboard: target (top row) vs inferred (bottom row)
+                        # Recover denoised latent: target = noise - latents, so latents_pred = noise - noise_pred
+                        latents_pred = (noise - noise_pred).detach()[:1]  # first sample only, (1, c, f, h, w)
+                        inferred_frames = vae.decode(latents_pred.to(vae.dtype)).sample  # (1, c, f, h, w)
+                        inferred_frames = inferred_frames.cpu().float().clamp(-1, 1)
+                        inferred_frames = rearrange(inferred_frames[0], "c f h w -> f c h w")  # (f, c, h, w)
+                        target_frames = rearrange(pv[0], "f c h w -> f c h w")  # (f, c, h, w)
+
+                        # Sample 8 evenly-spaced frame indices
+                        n_sample = min(8, f)
+                        frame_idx = torch.linspace(0, f - 1, n_sample).long()
+                        target_sampled = (target_frames[frame_idx] + 1.0) / 2.0  # (n, c, h, w), [0, 1]
+                        inferred_sampled = (inferred_frames[frame_idx] + 1.0) / 2.0
+
+                        # Stack as 2 rows: target on top, inferred on bottom
+                        grid = torchvision.utils.make_grid(
+                            torch.cat([target_sampled, inferred_sampled], dim=0),
+                            nrow=n_sample, padding=2
+                        )
+                        writer.add_image("training/target_vs_inferred", grid, global_step)
 
                 if global_step % args.checkpointing_steps == 0:
                     if args.use_deepspeed or accelerator.is_main_process:
@@ -1358,7 +1380,7 @@ def main():
                         )
                         transformer3d.train()
 
-            logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
+            logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0], "grad_norm": grad_norm.item() if torch.is_tensor(grad_norm) else grad_norm}
             progress_bar.set_postfix(**logs)
 
             if global_step >= args.max_train_steps:

@@ -89,7 +89,7 @@ def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=6, f
         if path.endswith("mp4"):
             imageio.mimsave(path, outputs, fps=fps)
         else:
-            imageio.mimsave(path, outputs, duration=(1000 * 1/fps))
+            imageio.mimsave(path, outputs, duration=(1000 * 1/fps), loop=0)
     else:
         if path.endswith("mp4"):
             path = path.replace('.mp4', '.gif')
