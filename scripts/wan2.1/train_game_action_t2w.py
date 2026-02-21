@@ -21,9 +21,10 @@
 # (https://github.com/aigc-apps/VideoX-Fun),
 # which is licensed under the Apache License, Version 2.0.
 
-try:    
+try:
     import comet_ml
 except ImportError:
+    comet_ml = None
     print("Comet is not installed in your env! Exp res will not be record.")
 
 import argparse
@@ -70,6 +71,7 @@ for project_root in project_roots:
 from microworld.data.bucket_sampler import RandomSampler
 from microworld.data.dataset_game_video import (VideoGameDataset,
                                                 GameVideoSampler)
+from microworld.data.dataset_microworld import MicroWorldDataset
 from microworld.models import (AutoencoderKLWan, CLIPModel, WanT5EncoderModel,
                               WanActionControlNetModel, WanActionAdaLNModel)
 from microworld.pipeline import WanActionT2WPipeline
@@ -210,6 +212,46 @@ def parse_args():
         help=(
             "A csv containing the training data. "
         ),
+    )
+    parser.add_argument(
+        "--dataset_type",
+        type=str,
+        default="game_video",
+        choices=["game_video", "microworld"],
+        help=(
+            "Dataset class to use. 'game_video' uses VideoGameDataset (MP4+JSON format). "
+            "'microworld' uses MicroWorldDataset (reads PNGs directly from data_5d_80x144 layout)."
+        ),
+    )
+    parser.add_argument(
+        "--microworld_prompt",
+        type=str,
+        default="",
+        help="Text prompt to use for all clips when using --dataset_type microworld.",
+    )
+    parser.add_argument(
+        "--microworld_steering_thresh",
+        type=float,
+        default=0.1,
+        help="Steering threshold for discretising to left/right keyboard action.",
+    )
+    parser.add_argument(
+        "--microworld_throttle_thresh",
+        type=float,
+        default=0.1,
+        help="Throttle threshold for discretising to forward keyboard action.",
+    )
+    parser.add_argument(
+        "--microworld_mouse_scale",
+        type=float,
+        default=0.05,
+        help="Scale factor applied to raw camera_dx/dy values to normalize mouse deltas.",
+    )
+    parser.add_argument(
+        "--microworld_mouse_clamp",
+        type=float,
+        default=5.0,
+        help="Clamp absolute value of scaled mouse deltas to suppress rare large spikes.",
     )
     parser.add_argument(
         "--output_dir",
@@ -897,13 +939,24 @@ def main():
     sample_n_frames_bucket_interval = vae.config.temporal_compression_ratio
     
     # Update the training dataset to include action inputs
-    train_dataset = VideoGameDataset(
-        ann_path=args.train_data_meta, 
-        data_root=args.train_data_dir,
-        video_sample_size=args.video_sample_size, 
-        video_sample_n_frames=args.video_sample_n_frames,
-        use_action=True,
-    )
+    if args.dataset_type == "microworld":
+        train_dataset = MicroWorldDataset(
+            data_root=args.train_data_dir,
+            clip_len=args.video_sample_n_frames,
+            steering_thresh=args.microworld_steering_thresh,
+            throttle_thresh=args.microworld_throttle_thresh,
+            mouse_scale=args.microworld_mouse_scale,
+            mouse_clamp=args.microworld_mouse_clamp,
+            prompt=args.microworld_prompt,
+        )
+    else:
+        train_dataset = VideoGameDataset(
+            ann_path=args.train_data_meta,
+            data_root=args.train_data_dir,
+            video_sample_size=args.video_sample_size,
+            video_sample_n_frames=args.video_sample_n_frames,
+            use_action=True,
+        )
 
     # DataLoaders creation:
     batch_sampler_generator = torch.Generator().manual_seed(args.seed)
@@ -956,7 +1009,8 @@ def main():
         tracker_config.pop("fix_sample_size")
         tracker_config.pop("trainable_modules")
         tracker_config.pop("trainable_modules_low_learning_rate")
-        accelerator.init_trackers(args.tracker_project_name, tracker_config, {"comet_ml": {"experiment_config": comet_ml.ExperimentConfig(name = time_str)}})
+        comet_init_kwargs = {"comet_ml": {"experiment_config": comet_ml.ExperimentConfig(name=time_str)}} if comet_ml is not None else {}
+        accelerator.init_trackers(args.tracker_project_name, tracker_config, comet_init_kwargs)
 
     # Function for unwrapping if model was compiled with `torch.compile`.
     def unwrap_model(model):

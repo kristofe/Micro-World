@@ -2,6 +2,11 @@ export MODEL_NAME="models/Diffusion_Transformer/Wan2.1-T2V-1.3B"
 export DATASET_NAME="datasets"
 export DATASET_META_NAME="datasets/dataset/video_captions_v0.csv"
 
+# To train on data_5d_80x144 captures instead, set:
+#   DATASET_NAME="../data_5d_80x144"
+#   and add --dataset_type microworld (no --train_data_meta needed)
+#   and use --video_sample_size 80 144  (matches source frame size)
+
 accelerate launch --num_processes $((GPUS_PER_NODE*WORLD_SIZE)) --num_machines $WORLD_SIZE --machine_rank=$RANK --mixed_precision="bf16" \
   --main_process_ip=$MASTER_ADDR --main_process_port=$MASTER_PORT \
   --use_deepspeed --deepspeed_config_file config/zero_stage2_config.json --deepspeed_multinode_launcher standard \

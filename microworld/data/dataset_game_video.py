@@ -13,7 +13,10 @@ from contextlib import contextmanager
 
 import torch
 import torchvision.transforms as transforms
-from decord import VideoReader
+try:
+    from decord import VideoReader
+except ImportError:
+    VideoReader = None  # decord unavailable; VideoGameDataset will fail at runtime if used
 from func_timeout import FunctionTimedOut, func_timeout
 from torch.utils.data import BatchSampler, Sampler
 from torch.utils.data.dataset import Dataset
