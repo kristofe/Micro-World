@@ -1294,6 +1294,19 @@ def main():
                 accelerator.log({"train_loss": train_loss}, step=global_step)
                 train_loss = 0.0
 
+                if accelerator.is_main_process and global_step % 50 == 0:
+                    with torch.no_grad():
+                        pv = batch['pixel_values'].cpu().float()  # (b, f, c, h, w), range [-1, 1]
+                        b, f, c, h, w = pv.shape
+                        source = pv[:, 0:1].expand(b, f, c, h, w).clone()  # first frame repeated
+                        side_by_side = torch.cat([source, pv], dim=-1)      # (b, f, c, h, w*2)
+                        sb_grid = rearrange(side_by_side, "b f c h w -> b c f h w")
+                        gif_dir = os.path.join(args.output_dir, "training_gifs")
+                        os.makedirs(gif_dir, exist_ok=True)
+                        save_videos_grid(sb_grid, os.path.join(gif_dir, f"step_{global_step:06d}.gif"), rescale=True, n_rows=b)
+                        tb_vid = ((side_by_side + 1.0) / 2.0).clamp(0, 1)  # (b, f, c, h, w*2), [0, 1]
+                        writer.add_video("training/source_vs_target", tb_vid, global_step, fps=8)
+
                 if global_step % args.checkpointing_steps == 0:
                     if args.use_deepspeed or accelerator.is_main_process:
                         # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`

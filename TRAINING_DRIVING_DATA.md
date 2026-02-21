@@ -111,7 +111,7 @@ models/
 ### Single GPU
 
 ```bash
-accelerate launch --num_processes 1 --mixed_precision bf16 \
+accelerate launch --num_processes 1 \
   scripts/wan2.1/train_game_action_t2w.py \
   --config_path="config/wan2.1/wan_civitai.yaml" \
   --pretrained_model_name_or_path=models/Diffusion_Transformer/Wan2.1-T2V-1.3B \
@@ -122,6 +122,7 @@ accelerate launch --num_processes 1 --mixed_precision bf16 \
   --video_sample_n_frames=81 \
   --train_batch_size=1 \
   --gradient_accumulation_steps=1 \
+  --training_with_video_token_length \
   --dataloader_num_workers=4 \
   --num_train_epochs=100 \
   --checkpointing_steps=500 \
@@ -134,10 +135,9 @@ accelerate launch --num_processes 1 --mixed_precision bf16 \
   --mixed_precision="bf16" \
   --adam_weight_decay=1e-1 \
   --adam_epsilon=1e-8 \
-  --vae_mini_batch=1 \
+  --vae_mini_batch=64 \
   --max_grad_norm=0.05 \
   --network_alpha 12 \
-  --low_vram \
   --tracker_project_name "MicroWorld-Driving" \
   --checkpoints_total_limit=5 \
   --trainable_modules "action" \
